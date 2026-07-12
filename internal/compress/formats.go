@@ -15,7 +15,7 @@ func CompressAvifQ12(input, output string) error {
 func OutputPath(input string, format FormatID, outDir string) string {
 	ext := extensionForFormat(format)
 	base := strings.TrimSuffix(filepath.Base(input), filepath.Ext(input))
-	return filepath.Join(outDir, fmt.Sprintf("%s-%s.%s", base, string(format), ext))
+	return filepath.Join(outDir, fmt.Sprintf("%s.%s", base, ext))
 }
 
 func extensionForFormat(f FormatID) string {

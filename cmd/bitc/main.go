@@ -8,9 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/yazdanctx/bitc-go/internal/compress"
-	"github.com/yazdanctx/bitc-go/internal/tui"
+	"github.com/yazdanctx/bitc-go/internal/scanner"
 	"github.com/yazdanctx/bitc-go/internal/version"
 )
 
@@ -66,15 +65,45 @@ func main() {
 		outputDir = filepath.Join(home, "Downloads", "compressed-"+time.Now().Format("2006-01-02-150405"))
 	}
 
-	p := tea.NewProgram(tui.InitialModel(dir, outputDir, version.Version), tea.WithAltScreen())
-	finalModel, err := p.Run()
+	fmt.Printf("bitc %s\n\n", version.Version)
+	fmt.Printf("Scanning %s ...\n", dir)
+
+	images, err := scanner.ScanDirectory(dir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error scanning directory: %v\n", err)
 		os.Exit(1)
 	}
 
-	if m, ok := finalModel.(tui.ModelAccessor); ok && m.GetSummary() != nil {
-		if err := compress.CopyBestResults(m.GetSummary(), outputDir); err != nil {
+	if len(images) == 0 {
+		fmt.Println("No images found.")
+		os.Exit(0)
+	}
+
+	fmt.Printf("Found %d image(s)\n\n", len(images))
+
+	formats := compress.AllFormats()
+	resultsCh := make(chan compress.ProgressMsg, 100)
+
+	go compress.RunCompression(images, formats, outputDir, resultsCh)
+
+	var summary *compress.CompressionSummary
+	for msg := range resultsCh {
+		if msg.Finished {
+			summary = msg.Summary
+			break
+		}
+		if msg.Result != nil {
+			r := msg.Result
+			if r.Err != nil {
+				fmt.Printf("  ✗ %s — %v\n", r.Image.Name, r.Err)
+			} else {
+				fmt.Printf("  %s  %s → %s (%.1f%% saved)\n", r.Image.Name, compress.FormatSize(r.OriginalSize), compress.FormatSize(r.CompressedSize), r.Savings)
+			}
+		}
+	}
+
+	if summary != nil && len(summary.Results) > 0 {
+		if err := compress.CopyBestResults(summary, outputDir); err != nil {
 			fmt.Fprintf(os.Stderr, "Error saving results: %v\n", err)
 			os.Exit(1)
 		}
@@ -85,5 +114,5 @@ func main() {
 func notifyDone(dir string) {
 	msg := fmt.Sprintf("bitc: done — saved to %s", dir)
 	exec.Command("osascript", "-e", fmt.Sprintf(`display notification %q with title "bitc"`, msg)).Run()
-	fmt.Printf("\n✓ %s\n", msg)
+	fmt.Printf("\n%s\n", msg)
 }

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -151,7 +152,8 @@ func CopyBestResults(summary *CompressionSummary, outputDir string) error {
 		}
 		defer src.Close()
 
-		dstPath := filepath.Join(outputDir, r.Image.Name)
+		nameNoExt := strings.TrimSuffix(r.Image.Name, filepath.Ext(r.Image.Name))
+		dstPath := filepath.Join(outputDir, nameNoExt+".avif")
 		dst, err := os.Create(dstPath)
 		if err != nil {
 			return fmt.Errorf("create %s: %w", dstPath, err)

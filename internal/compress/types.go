@@ -1,6 +1,9 @@
 package compress
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type FormatID string
 
@@ -43,6 +46,25 @@ type CompressionSummary struct {
 	TotalOriginal int64
 	TotalSaved    int64
 	Timestamp     string
+}
+
+func FormatSize(bytes int64) string {
+	switch {
+	case bytes >= 1<<20:
+		return formatFloat(float64(bytes)/(1<<20)) + " MB"
+	case bytes >= 1<<10:
+		return formatFloat(float64(bytes)/(1<<10)) + " KB"
+	default:
+		return formatFloat(float64(bytes)) + " B"
+	}
+}
+
+func formatFloat(f float64) string {
+	s := "%.1f"
+	if f >= 100 {
+		s = "%.0f"
+	}
+	return fmt.Sprintf(s, f)
 }
 
 func AllFormats() []FormatOption {
