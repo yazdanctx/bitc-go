@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 
@@ -23,15 +24,15 @@ func main() {
 	flag.BoolVar(&showVersion, "version", false, "Print version")
 	flag.StringVar(&outputDir, "output", "", "Override output directory")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "bitc-go — image compression tool\n\n")
-		fmt.Fprintf(os.Stderr, "Usage:\n  bitc-go <directory> [flags]\n\n")
+		fmt.Fprintf(os.Stderr, "bitc — image compression tool\n\n")
+		fmt.Fprintf(os.Stderr, "Usage:\n  bitc <directory> [flags]\n\n")
 		fmt.Fprintf(os.Stderr, "Flags:\n")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
 
 	if showVersion {
-		fmt.Printf("bitc-go %s\n", version)
+		fmt.Printf("bitc %s\n", version)
 		os.Exit(0)
 	}
 
@@ -78,5 +79,12 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error saving results: %v\n", err)
 			os.Exit(1)
 		}
+		notifyDone(outputDir)
 	}
+}
+
+func notifyDone(dir string) {
+	msg := fmt.Sprintf("bitc: done — saved to %s", dir)
+	exec.Command("osascript", "-e", fmt.Sprintf(`display notification %q with title "bitc"`, msg)).Run()
+	fmt.Printf("\n✓ %s\n", msg)
 }

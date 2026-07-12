@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"time"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/yazdanctx/bitc-go/internal/compress"
@@ -11,7 +13,6 @@ type state int
 
 const (
 	stateScanning state = iota
-	stateConfig
 	stateCompressing
 	stateResults
 )
@@ -22,20 +23,20 @@ type progressInfo struct {
 }
 
 type model struct {
-	state        state
-	dir          string
-	outputDir    string
-	images       []compress.ImageFile
-	formats      []compress.FormatOption
-	cursor       int
-	formatCursor int
-	spinner      spinner.Model
-	currentFile  string
-	progress     progressInfo
-	results      []compress.CompressResult
-	summary      *compress.CompressionSummary
-	compressCh   chan compress.ProgressMsg
-	err          error
+	state       state
+	dir         string
+	outputDir   string
+	images      []compress.ImageFile
+	formats     []compress.FormatOption
+	spinner     spinner.Model
+	currentFile string
+	currentSize int64
+	progress    progressInfo
+	results     []compress.CompressResult
+	summary     *compress.CompressionSummary
+	compressCh  chan compress.ProgressMsg
+	startTime   time.Time
+	err         error
 }
 
 type ModelAccessor interface {
@@ -88,38 +89,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return m, tea.Quit
-		case "enter":
-			if m.state == stateConfig && m.canStart() {
-				return m.startCompression()
-			}
-		case " ":
-			if m.state == stateConfig {
-				m.formats[m.formatCursor].Enabled = !m.formats[m.formatCursor].Enabled
-			}
-		case "up", "k":
-			if m.state == stateConfig {
-				if m.cursor > 0 {
-					m.cursor--
-				}
-			}
-		case "down", "j":
-			if m.state == stateConfig {
-				if m.cursor < len(m.images)-1 {
-					m.cursor++
-				}
-			}
-		case "left", "h":
-			if m.state == stateConfig {
-				if m.formatCursor > 0 {
-					m.formatCursor--
-				}
-			}
-		case "right", "l":
-			if m.state == stateConfig {
-				if m.formatCursor < len(m.formats)-1 {
-					m.formatCursor++
-				}
-			}
 		}
 
 	case scanDoneMsg:
@@ -128,7 +97,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 		m.images = msg.images
-		m.state = stateConfig
+		return m.startCompression()
 
 	case compressMsg:
 		cm := msg.msg
@@ -138,10 +107,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 		m.currentFile = cm.Current
-		m.progress = progressInfo{Done: cm.Done, Total: cm.Total}
 		if cm.Result != nil {
+			m.currentSize = cm.Result.OriginalSize
 			m.results = append(m.results, *cm.Result)
 		}
+		m.progress = progressInfo{Done: cm.Done, Total: cm.Total}
 		return m, waitForCompress(m.compressCh)
 
 	case spinner.TickMsg:
@@ -161,8 +131,6 @@ func (m model) View() string {
 	switch m.state {
 	case stateScanning:
 		return m.viewScanning()
-	case stateConfig:
-		return m.viewConfig()
 	case stateCompressing:
 		return m.viewCompressing()
 	case stateResults:
@@ -172,17 +140,9 @@ func (m model) View() string {
 	}
 }
 
-func (m model) canStart() bool {
-	for _, f := range m.formats {
-		if f.Enabled {
-			return true
-		}
-	}
-	return false
-}
-
 func (m model) startCompression() (tea.Model, tea.Cmd) {
 	m.state = stateCompressing
+	m.startTime = time.Now()
 	m.compressCh = make(chan compress.ProgressMsg, 100)
 
 	return m, tea.Batch(

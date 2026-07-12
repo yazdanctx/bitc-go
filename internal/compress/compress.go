@@ -114,11 +114,6 @@ func RunCompression(
 
 func buildSummary(results []CompressResult, images []ImageFile) *CompressionSummary {
 	var totalOrig, totalSaved int64
-	formatStats := make(map[FormatID]struct {
-		total   int64
-		saved   int64
-		count   int
-	})
 
 	for _, r := range results {
 		if r.Err != nil {
@@ -126,33 +121,12 @@ func buildSummary(results []CompressResult, images []ImageFile) *CompressionSumm
 		}
 		totalOrig += r.OriginalSize
 		totalSaved += r.OriginalSize - r.CompressedSize
-
-		fs := formatStats[r.Format]
-		fs.total += r.OriginalSize
-		fs.saved += r.OriginalSize - r.CompressedSize
-		fs.count++
-		formatStats[r.Format] = fs
-	}
-
-	bestFormat := FormatID("")
-	bestAvg := 0.0
-	for fid, fs := range formatStats {
-		if fs.count == 0 {
-			continue
-		}
-		avg := float64(fs.saved) / float64(fs.total) * 100
-		if avg > bestAvg {
-			bestAvg = avg
-			bestFormat = fid
-		}
 	}
 
 	return &CompressionSummary{
 		Results:       results,
 		TotalOriginal: totalOrig,
 		TotalSaved:    totalSaved,
-		BestFormat:    bestFormat,
-		BestFormatAvg: bestAvg,
 		Timestamp:     time.Now().Format("2006-01-02-150405"),
 	}
 }
@@ -165,19 +139,13 @@ func CopyBestResults(summary *CompressionSummary, outputDir string) error {
 		if r.Err != nil {
 			continue
 		}
-		key := r.Image.Path
-		if seen[key] {
+		if seen[r.Image.Path] {
 			continue
 		}
 
-		best := BestResultForImage(summary.Results, r.Image.Path)
-		if best == nil {
-			continue
-		}
-
-		src, err := os.Open(best.OutputPath)
+		src, err := os.Open(r.OutputPath)
 		if err != nil {
-			return fmt.Errorf("open %s: %w", best.OutputPath, err)
+			return fmt.Errorf("open %s: %w", r.OutputPath, err)
 		}
 		defer src.Close()
 
@@ -193,24 +161,7 @@ func CopyBestResults(summary *CompressionSummary, outputDir string) error {
 			return fmt.Errorf("copy to %s: %w", dstPath, err)
 		}
 
-		seen[key] = true
+		seen[r.Image.Path] = true
 	}
 	return nil
-}
-
-func BestResultForImage(results []CompressResult, imagePath string) *CompressResult {
-	var best *CompressResult
-	for i := range results {
-		r := &results[i]
-		if r.Err != nil {
-			continue
-		}
-		if r.Image.Path != imagePath {
-			continue
-		}
-		if best == nil || r.CompressedSize < best.CompressedSize {
-			best = r
-		}
-	}
-	return best
 }

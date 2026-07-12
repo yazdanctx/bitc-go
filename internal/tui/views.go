@@ -3,54 +3,12 @@ package tui
 import (
 	"fmt"
 	"strings"
-
-	"github.com/yazdanctx/bitc-go/internal/compress"
+	"time"
 )
 
 func (m model) viewScanning() string {
-	return "\n  " + m.spinner.View() + "  Scanning directory...\n"
-}
-
-func (m model) viewConfig() string {
 	var b strings.Builder
-
-	b.WriteString(titleStyle.Render(" bitc-go ") + "\n\n")
-	b.WriteString(subtitleStyle.Render(fmt.Sprintf("Found %d images in %s", len(m.images), m.dir)) + "\n\n")
-
-	b.WriteString("  Files:\n")
-	for i, img := range m.images {
-		cursor := "  "
-		if i == m.cursor {
-			cursor = fileSelectedStyle.Render("▸ ")
-		}
-		name := fileDefaultStyle.Render(img.Name)
-		size := subtitleStyle.Render(FormatSize(img.OrigSize))
-		b.WriteString(fmt.Sprintf("  %s%s %s\n", cursor, name, size))
-	}
-
-	b.WriteString("\n  Formats:\n")
-	for i, f := range m.formats {
-		cursor := "  "
-		if i == m.formatCursor {
-			cursor = fileSelectedStyle.Render("▸ ")
-		}
-		checkbox := checkboxOffStyle.Render("[ ]")
-		if f.Enabled {
-			checkbox = checkboxOnStyle.Render("[✓]")
-		}
-		label := fileDefaultStyle.Render(f.Label)
-		b.WriteString(fmt.Sprintf("  %s %s %s\n", cursor, checkbox, label))
-	}
-
-	b.WriteString("\n")
-	if m.canStart() {
-		b.WriteString("  " + startButtonStyle.Render(" Start ") + "  (enter)\n")
-	} else {
-		b.WriteString("  " + startButtonInactiveStyle.Render(" Start ") + "  enable at least one format\n")
-	}
-
-	b.WriteString("\n" + subtitleStyle.Render("  ↑/↓ navigate  space toggle format  enter start  q quit"))
-
+	b.WriteString("\n  " + m.spinner.View() + "  Scanning directory for images...\n")
 	return b.String()
 }
 
@@ -59,17 +17,25 @@ func (m model) viewCompressing() string {
 
 	b.WriteString(titleStyle.Render(" bitc-go ") + "\n\n")
 
+	elapsed := time.Since(m.startTime).Truncate(time.Second)
+
 	if m.progress.Total > 0 {
 		pct := float64(m.progress.Done) / float64(m.progress.Total) * 100
 		bar := renderProgressBar(pct, 40)
-		b.WriteString(fmt.Sprintf("  %s  %d/%d (%.0f%%)\n\n", bar, m.progress.Done, m.progress.Total, pct))
+		b.WriteString(fmt.Sprintf("  %s  %d/%d files\n\n", bar, m.progress.Done, m.progress.Total))
 	}
 
 	if m.currentFile != "" {
-		b.WriteString(fmt.Sprintf("  %s Compressing %s...\n", m.spinner.View(), m.currentFile))
+		b.WriteString(fmt.Sprintf("  %s %s", m.spinner.View(), fileDefaultStyle.Render(m.currentFile)))
+		if m.currentSize > 0 {
+			b.WriteString(subtitleStyle.Render(fmt.Sprintf("  (%s)", FormatSize(m.currentSize))))
+		}
+		b.WriteString("\n")
 	}
 
+	b.WriteString(fmt.Sprintf("\n  %s elapsed\n", subtitleStyle.Render(elapsed.String())))
 	b.WriteString("\n" + subtitleStyle.Render("  q quit"))
+
 	return b.String()
 }
 
@@ -82,44 +48,36 @@ func (m model) viewResults() string {
 		return b.String()
 	}
 
-	b.WriteString(fmt.Sprintf("  %-30s %10s %12s %10s %10s\n", "File", "Original", "Format", "Compressed", "Savings"))
-	b.WriteString(strings.Repeat("─", 76) + "\n")
+	b.WriteString(fmt.Sprintf("  %-30s %10s %10s %10s\n", "File", "Original", "Compressed", "Savings"))
+	b.WriteString(strings.Repeat("─", 64) + "\n")
 
-	perImage := make(map[string][]compress.CompressResult)
 	for _, r := range m.summary.Results {
-		perImage[r.Image.Name] = append(perImage[r.Image.Name], r)
-	}
-
-	for _, img := range m.images {
-		results := perImage[img.Name]
-		for i, r := range results {
-			if r.Err != nil {
-				continue
-			}
-			name := img.Name
-			if i > 0 {
-				name = ""
-			}
-			b.WriteString(fmt.Sprintf("  %-30s %10s %12s %10s %s\n",
-				name,
+		if r.Err != nil {
+			b.WriteString(fmt.Sprintf("  %-30s %10s %10s %s\n",
+				r.Image.Name,
 				FormatSize(r.OriginalSize),
-				string(r.Format),
-				FormatSize(r.CompressedSize),
-				FormatSavings(r.Savings),
+				errorStyle.Render("error"),
+				errorStyle.Render(r.Err.Error()),
 			))
+			continue
 		}
+		b.WriteString(fmt.Sprintf("  %-30s %10s %10s %s\n",
+			r.Image.Name,
+			FormatSize(r.OriginalSize),
+			FormatSize(r.CompressedSize),
+			FormatSavings(r.Savings),
+		))
 	}
 
-	b.WriteString(strings.Repeat("─", 76) + "\n")
+	b.WriteString(strings.Repeat("─", 64) + "\n")
 	totalPct := 0.0
 	if m.summary.TotalOriginal > 0 {
 		totalPct = float64(m.summary.TotalSaved) / float64(m.summary.TotalOriginal) * 100
 	}
-	b.WriteString(summaryStyle.Render(fmt.Sprintf("  Total: %s → saved %s (%.1f%%) — Best: %s",
+	b.WriteString(summaryStyle.Render(fmt.Sprintf("  Total: %s → %s saved (%.1f%%)",
 		FormatSize(m.summary.TotalOriginal),
 		FormatSize(m.summary.TotalSaved),
 		totalPct,
-		string(m.summary.BestFormat),
 	)) + "\n\n")
 
 	b.WriteString(fmt.Sprintf("  Saved to: %s\n", m.outputDir))
