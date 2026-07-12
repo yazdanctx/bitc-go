@@ -12,6 +12,11 @@ func CompressAvifQ12(input, output string) error {
 	return cmd.Run()
 }
 
+func PreprocessToBW(input, output string) error {
+	cmd := exec.Command("magick", input, "-colors", "2", output)
+	return cmd.Run()
+}
+
 func OutputPath(input string, format FormatID, outDir string) string {
 	ext := extensionForFormat(format)
 	base := strings.TrimSuffix(filepath.Base(input), filepath.Ext(input))

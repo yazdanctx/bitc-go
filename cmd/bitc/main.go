@@ -17,10 +17,12 @@ func main() {
 	var (
 		showVersion bool
 		outputDir   string
+		bw          bool
 	)
 
 	flag.BoolVar(&showVersion, "version", false, "Print version")
 	flag.StringVar(&outputDir, "output", "", "Override output directory")
+	flag.BoolVar(&bw, "bw", false, "Convert images to 2-color black & white before compressing")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "bitc — image compression tool\n\n")
 		fmt.Fprintf(os.Stderr, "Usage:\n  bitc <directory> [flags]\n\n")
@@ -84,7 +86,7 @@ func main() {
 	formats := compress.AllFormats()
 	resultsCh := make(chan compress.ProgressMsg, 100)
 
-	go compress.RunCompression(images, formats, outputDir, resultsCh)
+	go compress.RunCompression(images, formats, outputDir, bw, resultsCh)
 
 	var summary *compress.CompressionSummary
 	for msg := range resultsCh {
@@ -103,10 +105,6 @@ func main() {
 	}
 
 	if summary != nil && len(summary.Results) > 0 {
-		if err := compress.CopyBestResults(summary, outputDir); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving results: %v\n", err)
-			os.Exit(1)
-		}
 		notifyDone(outputDir)
 	}
 }

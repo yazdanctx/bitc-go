@@ -1,4 +1,4 @@
-VERSION ?= 0.2.0
+VERSION ?= 0.2.1
 LDFLAGS := -ldflags "-X github.com/yazdanctx/bitc-go/internal/version.Version=$(VERSION)"
 BINARY := bitc
 

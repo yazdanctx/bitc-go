@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"sync"
 	"time"
 )
@@ -23,6 +22,7 @@ func RunCompression(
 	images []ImageFile,
 	formats []FormatOption,
 	outDir string,
+	bw bool,
 	results chan<- ProgressMsg,
 ) {
 	var enabledFormats []FormatID
@@ -72,7 +72,29 @@ func RunCompression(
 				compressor := CompressorForFormat(job.Format)
 
 				start := time.Now()
-				err := compressor(job.Image.Path, outPath)
+
+				var inputPath string
+				if bw {
+					tmpFile := filepath.Join(outDir, fmt.Sprintf(".tmp-%d%s", time.Now().UnixNano(), filepath.Ext(job.Image.Path)))
+					if preErr := PreprocessToBW(job.Image.Path, tmpFile); preErr != nil {
+						done <- CompressResult{
+							Image:      job.Image,
+							Format:     job.Format,
+							OutputPath: outPath,
+							Duration:   time.Since(start),
+							Err:        fmt.Errorf("preprocess: %w", preErr),
+						}
+						continue
+					}
+					inputPath = tmpFile
+				} else {
+					inputPath = job.Image.Path
+				}
+
+				err := compressor(inputPath, outPath)
+				if bw {
+					os.Remove(inputPath)
+				}
 				duration := time.Since(start)
 
 				var compSize int64
@@ -143,38 +165,4 @@ func buildSummary(results []CompressResult, images []ImageFile) *CompressionSumm
 	}
 }
 
-func CopyBestResults(summary *CompressionSummary, outputDir string) error {
-	os.MkdirAll(outputDir, 0755)
 
-	seen := make(map[string]bool)
-	for _, r := range summary.Results {
-		if r.Err != nil {
-			continue
-		}
-		if seen[r.Image.Path] {
-			continue
-		}
-
-		src, err := os.Open(r.OutputPath)
-		if err != nil {
-			return fmt.Errorf("open %s: %w", r.OutputPath, err)
-		}
-		defer src.Close()
-
-		nameNoExt := strings.TrimSuffix(r.Image.Name, filepath.Ext(r.Image.Name))
-		dstPath := filepath.Join(outputDir, nameNoExt+".avif")
-		dst, err := os.Create(dstPath)
-		if err != nil {
-			return fmt.Errorf("create %s: %w", dstPath, err)
-		}
-		defer dst.Close()
-
-		_, err = dst.ReadFrom(src)
-		if err != nil {
-			return fmt.Errorf("copy to %s: %w", dstPath, err)
-		}
-
-		seen[r.Image.Path] = true
-	}
-	return nil
-}
