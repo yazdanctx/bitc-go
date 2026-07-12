@@ -36,6 +36,8 @@ func RunCompression(
 		return
 	}
 
+	results <- ProgressMsg{Total: totalJobs, Done: 0, Current: "starting..."}
+
 	os.MkdirAll(outDir, 0755)
 
 	jobs := make(chan CompressJob, totalJobs)
