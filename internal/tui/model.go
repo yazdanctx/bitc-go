@@ -3,8 +3,8 @@ package tui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/yazdun/bitc-go/internal/compress"
-	"github.com/yazdun/bitc-go/internal/scanner"
+	"github.com/yazdanctx/bitc-go/internal/compress"
+	"github.com/yazdanctx/bitc-go/internal/scanner"
 )
 
 type state int

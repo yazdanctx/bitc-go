@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/yazdun/bitc-go/internal/compress"
+	"github.com/yazdanctx/bitc-go/internal/compress"
 )
 
 var imageExtensions = map[string]bool{

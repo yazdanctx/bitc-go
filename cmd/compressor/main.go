@@ -8,8 +8,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/yazdun/bitc-go/internal/compress"
-	"github.com/yazdun/bitc-go/internal/tui"
+	"github.com/yazdanctx/bitc-go/internal/compress"
+	"github.com/yazdanctx/bitc-go/internal/tui"
 )
 
 var version = "dev"

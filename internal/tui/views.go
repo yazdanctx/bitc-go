@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/yazdun/bitc-go/internal/compress"
+	"github.com/yazdanctx/bitc-go/internal/compress"
 )
 
 func (m model) viewScanning() string {
