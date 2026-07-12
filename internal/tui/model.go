@@ -24,6 +24,7 @@ type progressInfo struct {
 
 type model struct {
 	state       state
+	version     string
 	dir         string
 	outputDir   string
 	images      []compress.ImageFile
@@ -47,12 +48,13 @@ func (m model) GetSummary() *compress.CompressionSummary {
 	return m.summary
 }
 
-func InitialModel(dir string, outputDir string) model {
+func InitialModel(dir string, outputDir string, version string) model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 
 	return model{
 		state:     stateScanning,
+		version:   version,
 		dir:       dir,
 		outputDir: outputDir,
 		formats:   compress.AllFormats(),

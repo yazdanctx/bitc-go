@@ -15,7 +15,7 @@ func (m model) viewScanning() string {
 func (m model) viewCompressing() string {
 	var b strings.Builder
 
-	b.WriteString(titleStyle.Render(" bitc-go ") + "\n\n")
+	b.WriteString(titleStyle.Render(fmt.Sprintf(" bitc v%s ", m.version)) + "\n\n")
 
 	elapsed := time.Since(m.startTime).Truncate(time.Second)
 

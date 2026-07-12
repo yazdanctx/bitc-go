@@ -1,4 +1,4 @@
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+VERSION ?= 1.0.0
 LDFLAGS := -ldflags "-X main.version=$(VERSION)"
 BINARY := bitc
 
@@ -8,7 +8,11 @@ build:
 	go build $(LDFLAGS) -o $(BINARY) ./cmd/bitc
 
 install:
-	go install $(LDFLAGS) ./cmd/bitc
+	cp $(BINARY) /usr/local/bin/$(BINARY)
 
 clean:
 	rm -f $(BINARY)
+
+tag:
+	git tag -a v$(VERSION) -m "v$(VERSION)"
+	git push origin v$(VERSION)
