@@ -11,7 +11,7 @@ brew install imagemagick oxipng pngquant webp libavif
 ## Install
 
 ```bash
-go install github.com/yazdanctx/bitc-go/cmd/compressor@latest
+go install github.com/yazdanctx/bitc-go/cmd/bitc@latest
 ```
 
 Or build from source:
@@ -26,9 +26,9 @@ make install
 ## Usage
 
 ```bash
-compressor ./my-images
-compressor ./my-images --output ~/my-folder
-compressor --version
+bitc ./my-images
+bitc ./my-images --output ~/my-folder
+bitc --version
 ```
 
 ## License
