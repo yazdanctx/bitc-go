@@ -67,7 +67,7 @@ func main() {
 		outputDir = filepath.Join(home, "Downloads", "compressed-"+time.Now().Format("2006-01-02-150405"))
 	}
 
-	p := tea.NewProgram(tui.InitialModel(dir, outputDir), tea.WithAltScreen())
+	p := tea.NewProgram(tui.InitialModel(dir, outputDir, version), tea.WithAltScreen())
 	finalModel, err := p.Run()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
