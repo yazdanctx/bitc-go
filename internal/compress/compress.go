@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -60,9 +61,12 @@ func RunCompression(
 	}
 
 	done := make(chan CompressResult, totalJobs)
+	var wg sync.WaitGroup
 
 	for i := 0; i < workers; i++ {
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			for job := range jobs {
 				outPath := OutputPath(job.Image.Path, job.Format, outDir)
 				compressor := CompressorForFormat(job.Format)
@@ -98,6 +102,11 @@ func RunCompression(
 			}
 		}()
 	}
+
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
 
 	go func() {
 		for result := range done {
