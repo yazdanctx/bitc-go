@@ -11,9 +11,8 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/yazdanctx/bitc-go/internal/compress"
 	"github.com/yazdanctx/bitc-go/internal/tui"
+	"github.com/yazdanctx/bitc-go/internal/version"
 )
-
-var version = "dev"
 
 func main() {
 	var (
@@ -32,7 +31,7 @@ func main() {
 	flag.Parse()
 
 	if showVersion {
-		fmt.Printf("bitc %s\n", version)
+		fmt.Printf("bitc %s\n", version.Version)
 		os.Exit(0)
 	}
 
@@ -67,7 +66,7 @@ func main() {
 		outputDir = filepath.Join(home, "Downloads", "compressed-"+time.Now().Format("2006-01-02-150405"))
 	}
 
-	p := tea.NewProgram(tui.InitialModel(dir, outputDir, version), tea.WithAltScreen())
+	p := tea.NewProgram(tui.InitialModel(dir, outputDir, version.Version), tea.WithAltScreen())
 	finalModel, err := p.Run()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

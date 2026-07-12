@@ -1,8 +1,8 @@
-VERSION ?= 1.0.0
-LDFLAGS := -ldflags "-X main.version=$(VERSION)"
+VERSION ?= 0.1.0
+LDFLAGS := -ldflags "-X github.com/yazdanctx/bitc-go/internal/version.Version=$(VERSION)"
 BINARY := bitc
 
-.PHONY: build install clean
+.PHONY: build install clean tag
 
 build:
 	go build $(LDFLAGS) -o $(BINARY) ./cmd/bitc
